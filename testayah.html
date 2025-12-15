@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Sure - by azad_anil1211</title>
+    <style>
+        /* [CSS-Code bleibt unverändert] */
+        #three-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
+        body { margin: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; background: none; padding: 20px; box-sizing: border-box; color: #ffffff; }
+        .center { text-align: center; width: 100%; max-width: 600px; padding: 30px; background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(8px); border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.6); z-index: 10; }
+        .page-header { text-align: center; margin-bottom: 30px; z-index: 10; }
+        h1 { margin: 0; color: #ffd700; font-size: 2.5rem; font-weight: 700; }
+        h2 { margin: 10px 0 0 0; color: #3498db; font-size: 1.8rem; font-weight: 400; }
+        .top-right { position: fixed; top: 20px; right: 20px; z-index: 10; }
+        button { padding: 12px 24px; font-size: 16px; cursor: pointer; border-radius: 8px; border: none; background: #2c3e50; color: white; transition: background 0.3s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        button:hover { background: #1a242f; box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+        #ayah { margin-top: 25px; font-size: 20px; line-height: 1.6; white-space: pre-wrap; color: #ffffff; min-height: 80px; }
+        #surah-info { margin-top: 15px; font-weight: bold; color: #dddddd; font-size: 14px; }
+        .transliteration-text { font-style: italic; font-size: 0.9em; display: block; margin: 10px 0; color: #ffffff; }
+    </style>
+</head>
+<body>
+
+    <canvas id="three-canvas"></canvas>
+
+    <div class="top-right">
+        <button onclick="window.location.href='https://redstone-studios.de';">
+            Kontakt
+        </button>
+    </div>
+
+    <header class="page-header">
+        <h1>by azad_anil1211</h1>
+        <h2>Islam</h2>
+    </header>
+
+    <main class="center">
+        <button id="randomBtn">Drück mich für eine Ayah</button>
+
+        <div id="ayah"></div>
+        <div id="surah-info"></div>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        // --- 3D SETUP ---
+        const canvas = document.querySelector('#three-canvas');
+        
+        const scene = new THREE.Scene();
+
+        // GALAXIE HINTERGRUND
+        const textureLoader = new THREE.TextureLoader();
+        const starTexture = textureLoader.load('https://threejs.org/examples/textures/skyboxsun25deg/lila-nebula.jpg', function (texture) {
+            scene.background = texture;
+        });
+        
+        // LICHT
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        
+        const pointLight = new THREE.PointLight(0xffffff, 1.2); 
+        pointLight.position.set(5, 5, 5);
+        scene.add(pointLight);
+
+        // KAMERA
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 5;
+
+        // RENDERER
+        const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        
+        // 5. Material (Einheitliches, glänzendes Weiß)
+        const mosqueMaterial = new THREE.MeshPhongMaterial({ 
+            color: 0xffffff, // Reinweiß
+            specular: 0xeeeeee, 
+            shininess: 100,
+            emissive: 0x000000, 
+        }); 
+        
+        // --------------------------------------------------------
+        // MOSCHEE-TEILE DEFINIEREN
+        // --------------------------------------------------------
+
+        // 1. Minarett (Zylinder) - Zwei Stück
+        const minaretHeight = 2.5;
+        const minaretDistance = 2.5; // Abstand von der Mitte
+        const minaretGeometry = new THREE.CylinderGeometry(0.15, 0.15, minaretHeight, 16); 
+        const minaretR = new THREE.Mesh(minaretGeometry, mosqueMaterial);
+        const minaretL = new THREE.Mesh(minaretGeometry, mosqueMaterial);
+        
+        // 2. Kuppel (Halbkugel) - Zentral
+        const domeRadius = 1.5;
+        const domeGeometry = new THREE.SphereGeometry(domeRadius, 32, 32, 0, Math.PI * 2, 0, Math.PI / 2); 
+        const dome = new THREE.Mesh(domeGeometry, mosqueMaterial);
+
+        // 3. Hauptgebäude-Basis (Box)
+        const baseWidth = 3.0;
+        const baseHeight = 1.0;
+        const baseDepth = 1.5;
+        const baseGeometry = new THREE.BoxGeometry(baseWidth, baseHeight, baseDepth); 
+        const base = new THREE.Mesh(baseGeometry, mosqueMaterial);
+        
+        // --------------------------------------------------------
+        // POSITIONIERUNG DER GRUPPE
+        // --------------------------------------------------------
+        const mosqueGroup = new THREE.Group();
+        
+        // Minarette (Links und Rechts der Kuppel)
+        minaretR.position.set(minaretDistance, minaretHeight / 2, 0); 
+        minaretL.position.set(-minaretDistance, minaretHeight / 2, 0); 
+        
+        // Kuppel (Mittig über der Basis)
+        dome.position.set(0, baseHeight / 2 + domeRadius / 2, 0);
+
+        // Basis (auf dem "Boden")
+        base.position.set(0, baseHeight / 2, 0); 
+
+        // Füge alles zur Gruppe hinzu
+        mosqueGroup.add(minaretR);
+        mosqueGroup.add(minaretL);
+        mosqueGroup.add(dome);
+        mosqueGroup.add(base);
+        
+        // KLEINER MACHEN
+        mosqueGroup.scale.set(0.6, 0.6, 0.6); // etwas kleiner skaliert
+
+        // POSITION: Etwas weiter links (X=3) von der Mitte des 3D-Raums, aber immer noch rechts von der Ayah-Box
+        mosqueGroup.position.set(3, 1, 0); 
+
+        scene.add(mosqueGroup);
+
+        // --------------------------------------------------------
+        // ** PARTIKEL-SYSTEM **
+        // --------------------------------------------------------
+        const particleCount = 2000;
+        const particles = new THREE.BufferGeometry();
+        const positions = [];
+        
+        for (let i = 0; i < particleCount; i++) {
+            const x = (Math.random() - 0.5) * 50;
+            const y = (Math.random() - 0.5) * 50;
+            const z = (Math.random() - 0.5) * 50;
+            positions.push(x, y, z);
+        }
+        
+        particles.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        
+        const particleMaterial = new THREE.PointsMaterial({
+            color: 0xffffff,
+            size: 0.1,
+            sizeAttenuation: true
+        });
+        
+        const particleSystem = new THREE.Points(particles, particleMaterial);
+        scene.add(particleSystem);
+
+
+        // 7. Animations-Loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Separate Rotation der Teile
+            minaretR.rotation.y += 0.005;
+            minaretL.rotation.y -= 0.005; // gegenläufig
+            dome.rotation.y += 0.003;
+            base.rotation.y += 0.001; 
+            
+            // Partikel-System langsam rotieren lassen
+            particleSystem.rotation.y += 0.0005;
+
+            renderer.render(scene, camera);
+        };
+
+        // 8. Responsivität
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Animation starten
+        animate();
+    </script>
+    
+    <script>
+        const btn = document.getElementById('randomBtn');
+        const ayahDiv = document.getElementById('ayah');
+        const surahInfoDiv = document.getElementById('surah-info');
+
+        async function getRandomAyah() {
+            btn.disabled = true;
+            btn.textContent = 'Lädt...';
+            ayahDiv.style.opacity = '0.5';
+            ayahDiv.textContent = 'Lade Vers...';
+
+            try {
+                const randomNumber = Math.floor(Math.random() * 6236) + 1;
+
+                // API: alquran.cloud mit Bubenheim Übersetzung und Transliteration
+                const url =
+                    'https://api.alquran.cloud/v1/ayah/' +
+                    randomNumber +
+                    '/editions/quran-uthmani,de.bubenheim,en.transliteration';
+
+                const res = await fetch(url);
+
+                if (!res.ok) {
+                    throw new Error('Netzwerk- oder API-Fehler: HTTP-Status ' + res.status);
+                }
+
+                const data = await res.json();
+
+                if (data.code !== 200) {
+                    throw new Error('API-Fehlercode: ' + data.code);
+                }
+
+                const arabic = data.data[0];
+                const german = data.data[1];
+                const transliteration = data.data[2];
+
+                // Text anzeigen: Arabisch, dann Umschrift, dann Deutsch
+                ayahDiv.innerHTML =
+                    '<span dir="rtl" lang="ar" style="font-family: serif; font-size: 1.3em;">' + arabic.text + '</span>' +
+                    '<span class="transliteration-text">' + transliteration.text + '</span>' +
+                    german.text;
+
+                surahInfoDiv.textContent =
+                    'Sure: ' +
+                    arabic.surah.englishName +
+                    ' (' + arabic.surah.number + '), Ayah ' +
+                    arabic.numberInSurah +
+                    ' (Übersetzung: Bubenheim & Elyas)';
+
+            } catch (e) {
+                console.error("Fehler beim Abrufen der Ayah:", e);
+                ayahDiv.textContent = 'FEHLER: Der Koran-Vers konnte nicht geladen werden. Bitte versuchen Sie es später erneut.';
+                surahInfoDiv.textContent = '';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Drück mich für eine Ayah';
+                ayahDiv.style.opacity = '1';
+            }
+        }
+
+        getRandomAyah();
+
+        btn.addEventListener('click', getRandomAyah);
+    </script>
+</body>
+</html>

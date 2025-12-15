@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Euro Clicker - Erweitert</title>
+    <style>
+        /* CSS-Styling */
+        body {
+            background-color: black;
+            color: white;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            user-select: none;
+        }
+
+        #game-container {
+            display: flex;
+            max-width: 1200px;
+            width: 90%;
+            gap: 20px;
+        }
+
+        #click-area {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        #score-area {
+            font-size: 2em;
+            margin-bottom: 5px;
+            color: #00ffff;
+        }
+        
+        #rate-area {
+            font-size: 1.2em;
+            margin-bottom: 20px;
+            color: #99ffff;
+            text-align: center;
+        }
+
+        #click-button {
+            background-color: #333;
+            color: white;
+            padding: 40px 80px;
+            font-size: 2.5em;
+            cursor: pointer;
+            border: 5px solid white;
+            border-radius: 15px;
+            box-shadow: 0 0 30px 5px cyan;
+            transition: transform 0.1s, box-shadow 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #click-button:hover {
+            box-shadow: 0 0 40px 8px cyan;
+        }
+
+        #click-button:active {
+            transform: scale(0.98);
+        }
+
+        .cookie-img {
+            width: 80px;
+            height: 80px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            animation: bounce 0.5s infinite alternate;
+        }
+
+        @keyframes bounce {
+            from { transform: translate(-50%, -50%) scale(1); }
+            to { transform: translate(-50%, -45%) scale(1.05); }
+        }
+
+        #upgrade-area {
+            width: 300px;
+            padding: 20px;
+            border-left: 1px solid #333;
+        }
+
+        .upgrade-item {
+            background-color: #222;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .upgrade-info {
+            line-height: 1.4;
+        }
+
+        .upgrade-button {
+            background-color: #00ffff;
+            color: black;
+            border: none;
+            padding: 10px 15px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: background-color 0.1s;
+        }
+
+        .upgrade-button:hover {
+            background-color: #00dddd;
+        }
+
+        .upgrade-button:disabled {
+            background-color: #555;
+            color: #aaa;
+            cursor: not-allowed;
+        }
+
+        .floating-score {
+            position: absolute;
+            color: cyan;
+            font-size: 1.5em;
+            font-weight: bold;
+            pointer-events: none;
+            animation: floatup 1.5s ease-out forwards;
+        }
+
+        @keyframes floatup {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-50px) scale(0.8);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="click-area">
+            <h1>Euro Clicker</h1>
+            
+            <div id="score-area">
+                <span id="euros">0.00</span> €
+            </div>
+
+            <div id="rate-area">
+                <span id="eps-display">0.00</span> €/Sekunde | Klick: <span id="click-multiplier">1.00</span> €
+            </div>
+            
+            <button id="click-button">
+                DRUCK MICH
+                <img src="https://em-content.zobj.net/source/apple/391/cookie_1f36a.png" alt="Cookie" class="cookie-img">
+            </button>
+            
+        </div>
+
+        <div id="upgrade-area">
+            <h2>Upgrades</h2>
+            <div id="upgrades-list">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let euros = 0.00;
+        let clickMultiplier = 1.00; // Verdienst pro Klick
+        let eurosPerSecond = 0.00; // Passives Einkommen
+
+        const eurosDisplay = document.getElementById('euros');
+        const epsDisplay = document.getElementById('eps-display');
+        const clickMultiplierDisplay = document.getElementById('click-multiplier');
+        const clickButton = document.getElementById('click-button');
+        const upgradesList = document.getElementById('upgrades-list');
+
+        // Upgrade-Definitionen (mit Klick- und Passiv-Bonus)
+        const upgrades = [
+            { id: 'cursor', name: 'Maus-Upgrade', baseCost: 10.00, count: 0, epsIncrease: 0.1, clickIncrease: 0.5, costIncreaseRate: 1.15 },
+            { id: 'oma', name: 'Oma anstellen', baseCost: 50.00, count: 0, epsIncrease: 0.5, clickIncrease: 2.0, costIncreaseRate: 1.15 },
+            { id: 'fabrik', name: 'Keksfabrik', baseCost: 200.00, count: 0, epsIncrease: 2.0, clickIncrease: 5.0, costIncreaseRate: 1.15 },
+            { id: 'grinchschule', name: 'Grinch Schule', baseCost: 1000.00, count: 0, epsIncrease: 10.0, clickIncrease: 20.0, costIncreaseRate: 1.15 },
+            { id: 'weihnachtsmann', name: 'Weihnachtsmann (Global)', baseCost: 5000.00, count: 0, epsIncrease: 50.0, clickIncrease: 100.0, costIncreaseRate: 1.15 },
+        ];
+
+        // Funktion zum Aktualisieren der Anzeige
+        function updateDisplay() {
+            eurosDisplay.textContent = euros.toFixed(2);
+            epsDisplay.textContent = eurosPerSecond.toFixed(2);
+            clickMultiplierDisplay.textContent = clickMultiplier.toFixed(2);
+        }
+
+        // Klick-Funktion
+        clickButton.addEventListener('click', (event) => {
+            const earned = clickMultiplier;
+            euros += earned;
+            updateDisplay();
+            
+            // Fliegenden Punkt anzeigen
+            const floatingScore = document.createElement('div');
+            floatingScore.classList.add('floating-score');
+            floatingScore.textContent = `+${earned.toFixed(2)} €`;
+            
+            const rect = clickButton.getBoundingClientRect();
+            floatingScore.style.left = `${event.clientX - rect.left}px`;
+            floatingScore.style.top = `${event.clientY - rect.top}px`;
+            
+            clickButton.appendChild(floatingScore);
+            
+            floatingScore.addEventListener('animationend', () => {
+                floatingScore.remove();
+            });
+
+            renderUpgrades();
+        });
+
+        // Passives Einkommen generieren
+        function generatePassiveIncome() {
+            if (eurosPerSecond > 0) {
+                // Fügt den Ertrag pro Sekunde, geteilt durch 10, hinzu (läuft 10x pro Sekunde)
+                euros += eurosPerSecond / 10;
+                updateDisplay();
+            }
+            // Überprüft nach dem passiven Einkommen, welche Upgrades kaufbar sind
+            renderUpgrades(); 
+        }
+        // Führt die Funktion alle 100 Millisekunden aus
+        setInterval(generatePassiveIncome, 100); 
+
+        // Funktion zum Berechnen der aktuellen Kosten
+        function getCurrentCost(upgrade) {
+            // Kosten steigen mit jedem gekauften Gegenstand
+            return upgrade.baseCost * Math.pow(upgrade.costIncreaseRate, upgrade.count);
+        }
+
+        // Funktion zum Kaufen eines Upgrades
+        function buyUpgrade(upgrade) {
+            const cost = getCurrentCost(upgrade);
+
+            if (euros >= cost) {
+                euros -= cost; // Geld wird abgezogen
+                
+                // Klick-Multiplikator erhöhen
+                clickMultiplier += upgrade.clickIncrease;
+
+                // Passive Rate erhöhen (EPS)
+                eurosPerSecond += upgrade.epsIncrease; 
+                
+                // Anzahl erhöhen und nächsten Kauf teurer machen
+                upgrade.count++; 
+                
+                updateDisplay();
+                renderUpgrades(); 
+            
+            } else {
+                alert(`Nicht genug Geld! Du brauchst noch ${ (cost - euros).toFixed(2) } € für ${upgrade.name}.`);
+            }
+        }
+
+        // Funktion zum Rendern der Upgrades
+        function renderUpgrades() {
+            upgradesList.innerHTML = '';
+
+            upgrades.forEach(upgrade => {
+                const cost = getCurrentCost(upgrade);
+                const isAffordable = euros >= cost;
+                
+                const item = document.createElement('div');
+                item.classList.add('upgrade-item');
+                item.id = `upgrade-${upgrade.id}`;
+
+                item.innerHTML = `
+                    <div class="upgrade-info">
+                        <strong>${upgrade.name} (Besitz: ${upgrade.count})</strong><br>
+                        <span>Kosten: ${cost.toFixed(2)} €</span> 
+                        <br>
+                        <span>+${upgrade.epsIncrease.toFixed(2)} €/s</span> | 
+                        <span>+${upgrade.clickIncrease.toFixed(2)} Klick</span>
+                    </div>
+                    <button class="upgrade-button" 
+                            data-id="${upgrade.id}"
+                            ${isAffordable ? '' : 'disabled'}>
+                        Kaufen
+                    </button>
+                `;
+                
+                const buyButton = item.querySelector('.upgrade-button');
+                buyButton.addEventListener('click', () => {
+                    buyUpgrade(upgrade);
+                });
+
+                upgradesList.appendChild(item);
+            });
+        }
+
+        // Spiel initialisieren
+        updateDisplay();
+        renderUpgrades(); 
+    </script>
+
+</body>
+</html>
